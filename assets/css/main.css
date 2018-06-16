@@ -1,0 +1,7 @@
+html, body {
+  background: url(../img/bg.png) repeat;
+}
+
+.actions {
+padding: 10px 0;
+}
