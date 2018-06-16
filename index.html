@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Cuestionarios</title>
+  <link rel="stylesheet" href="assets/vendor/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="assets/vendor/fontawesome/css/fontawesome-all.min.css">
+  <link rel="stylesheet" href="assets//css/main.css">
+
+</head>
+<body>
+
+
+  <div class="container">
+    <header class="page-header">
+      <div class="branding">
+        <h1 class="text-center"><i class="fa fa-question-circle"></i> Cuestionarios</h1>
+      </div>
+    </header>
+    <main id="app"></main>
+  </div>
+
+  <template id="cuestionario-lista">
+    <section class="jumbotron jumbotron-fluid">
+      <div class="container">
+        <div class="row">
+          <div class="actions col">
+            <router-link class="btn btn-default" :to="{path: '/nuevo-cuestionario'}">
+              <i class="fa fa-plus-circle"></i>
+              Crear cuestionario
+            </router-link>
+          </div>
+          <div class="filters col">
+            <div class="form-group row">
+              <label for="search-element" class="col-sm-3 col-form-label">Buscar</label>
+              <div class="col-sm-9">
+                <input v-model="searchKey" class="form-control" id="search-element" requred/>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <table class="table table-hover">
+          <thead class="thead-dark">
+            <tr>
+              <th>Nombre</th>
+              <th>Preguntas</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="cuestionario in filtradoCuestionarios">
+              <td>
+                <router-link :to="{name: 'cuestionario', params: {cuestionario_id: cuestionario.id}}">{{ cuestionario.nombre }}</router-link>
+              </td>
+              <td>
+                {{ cuestionario.preguntas }}
+              </td>
+              <td>
+                <router-link class="btn btn-default btn-xs" :to="{name: 'cuestionario', params: {cuestionario_id: cuestionario.id}}" title="Ver Cuestionario"><i class="fa fa-eye"></i></router-link>
+                <router-link class="btn btn-default btn-xs" :to="{name: 'cuestionario-editar', params: {cuestionario_id: cuestionario.id}}" title="Editar Cuestionario"><i class="fa fa-edit"></i></router-link>
+                <router-link class="btn btn-default btn-xs" :to="{name: 'cuestionario-borrar', params: {cuestionario_id: cuestionario.id}}" title="Borrar Cuestionario"><i class="fa fa-trash-alt"></i></router-link> |
+                <router-link class="btn btn-default btn-xs" :to="{name: 'cuestionario-preguntas', params: {cuestionario_id: cuestionario.id}}" title="Administrar preguntas"><i class="fa fa-list-ul"></i></router-link>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </template>
+
+  <template id="nuevo-cuestionario">
+    <section class="jumbotron jumbotron-fluid">
+      <div class="container">
+        <h2>Crear cuestionario</h2>
+        <hr>
+        <form v-on:submit="createCuestionario">
+          <div class="form-group row">
+            <label for="agregar-nombre" class="col-sm-3 col-form-label">Nombre</label>
+            <div class="col-sm-9">
+              <input class="form-control" id="agregar-nombre" v-model="cuestionario.nombre" required/>
+            </div>
+          </div>
+          <div class="form-group row">
+            <label for="agregar-cantidad" class="col-sm-3 col-form-label">Cantidad de Preguntas</label>
+            <div class="col-sm-9">
+              <input type="number" class="form-control" id="agregar-cantidad" v-model="cuestionario.preguntas" min="1" required />
+            </div>
+          </div>
+          <hr>
+          <div class="row">
+            <div class="col-sm-12">
+              <button type="submit" class="btn btn-primary"><i class="fa fa-angle-left"></i> Guardar</button>
+              <router-link class="btn btn-default float-right" :to="{name: 'root'}"><i class="fa fa-angle-left"></i> Cancelar</router-link>
+            </div>
+          </div>
+
+        </form>
+      </div>
+    </section>
+  </template>
+
+  <template id="cuestionario">
+      <section class="jumbotron jumbotron-fluid">
+
+        <div class="container">
+          <div class="row">
+            <div class="col-12">
+              <router-link to="/"><i class="fa fa-angle-left"></i> Regresar a la lista de cuestionarios</router-link>
+            </div>
+          </div>
+          <hr>
+          <div class="row">
+            <div class="col-12">
+              <h2>{{ cuestionario.nombre }}</h2>
+
+              <form name="cuestionario" id="cuestionario">
+                <div v-for="pregunta in preguntas">
+                  <div class="form-group" v-if="isInArray(pregunta.tipo)">
+                    <label :for="pregunta.id">{{ pregunta.enunciado }}</label>
+                    <input :type="pregunta.tipo" class="form-control" :id="pregunta.id" required/>
+                  </div>
+
+                  <div class="form-group" v-if="pregunta.tipo == 'textarea'">
+                    <label :for="pregunta.id">{{ pregunta.enunciado }}</label>
+                    <textarea class="form-control" :id="pregunta.id" rows="3" required></textarea>
+                  </div>
+
+                  <div v-if="pregunta.tipo == 'radio'" class="form-group">
+                    {{ pregunta.enunciado }}
+                    <div class="form-check" v-for="(opcion, index) in pregunta.opciones">
+                      <input class="form-check-input" type="radio" name="radio" :id="'op'+index+'-'+pregunta.id" :value="'opcion'+index">
+                      <label class="form-check-label" :for="'op'+index+'-'+pregunta.id">
+                        {{ opcion.valor }}
+                      </label>
+                    </div>
+                  </div>
+
+                  <div v-if="pregunta.tipo == 'select'">
+                    <div class="form-group">
+                      <label :for="'select'+pregunta.id">{{ pregunta.enunciado }}</label>
+                      <select :id="'select'+pregunta.id" class="form-control" required>
+                        <option v-for="(opcion, index) in pregunta.opciones" value="opcion">{{ opcion.valor }}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div v-if="pregunta.tipo == 'checkbox'" class="form-group">
+                    {{ pregunta.enunciado }}
+                    <div class="form-check" v-for="(opcion, index) in pregunta.opciones">
+                      <input class="form-check-input" type="checkbox" name="radio" :id="'opb'+index+'-'+pregunta.id" :value="'opcion'+index">
+                      <label class="form-check-label" :for="'opb'+index+'-'+pregunta.id">
+                        {{ opcion.valor }}
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Guardar</button>
+              </form>
+            </div>
+          </div>
+
+        </div>
+        <hr>
+        <div class="container">
+          <div class="row">
+            <div class="col-12"><h3>Estructura del formulario</h3></div>
+            <hr>
+            <div class="col-12">
+              <div class="card">
+                <div class="card-body">
+                  <pre>{{ $data }}</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+  </template>
+
+  <template id="cuestionario-editar">
+
+      <section class="jumbotron jumbotron-fluid">
+        <div class="container">
+          <h2>Editar cuestionario</h2>
+          <hr>
+          <form v-on:submit="actualizarCuestionario">
+            <div class="form-group">
+              <label for="editar-nombre">Nombre</label>
+              <input class="form-control" id="editar-nombre" v-model="cuestionario.nombre" required/>
+            </div>
+            <div class="form-group">
+              <label for="editar-cantidad">Cantidad de Preguntas</label>
+              <input type="number" class="form-control" id="editar-cantidad" v-model="cuestionario.preguntas" required min="1">
+            </div>
+            <hr>
+            <div class=" row">
+              <div class="col-sm-12">
+                <button type="submit" class="btn btn-primary"><i class="fa fa-angle-left"></i> Guardar</button>
+                <router-link class="btn btn-default float-right" :to="{name: 'root'}"><i class="fa fa-angle-left"></i> Cancelar</router-link>
+              </div>
+            </div>
+
+          </form>
+        </div>
+      </section>
+  </template>
+
+  <template id="cuestionario-borrar">
+      <section class="jumbotron jumbotron-fluid">
+        <div class="container">
+          <h2>Borrar cuestionario {{ cuestionario.nombre }}</h2>
+          <form v-on:submit="borrarCuestionario">
+            <p>Esta acción no se puede deshacer.</p>
+            <hr>
+            <div class=" row">
+              <div class="col-sm-12">
+                <button type="submit" class="btn btn-danger"><i class="fa fa-angle-left"></i> Borrar</button>
+                <router-link :to="{name: 'root'}" class="btn btn-default float-right"><i class="fa fa-angle-left"></i> Cancelar</router-link>
+              </div>
+            </div>
+
+          </form>
+        </div>
+      </section>
+  </template>
+
+
+  <template id="cuestionario-preguntas">
+    <section class="jumbotron jumbotron-fluid">
+
+      <div class="container">
+        <div class="row">
+          <h3><em>Cuestionario: </em> {{cuestionario.nombre}}</h3>
+        </div>
+        <div class="row">
+          <div class="actions col">
+            <router-link class="btn btn-default" :to="{path: '/'}">
+              <i class="fa fa-angle-left"></i>
+              Regresar a los cuestionarios
+            </router-link>
+          </div>
+
+          <div class="actions col" v-if="cuestionario.preguntas > filtradoPreguntas.length">
+            <router-link class="btn btn-default float-right" :to="{name: 'nueva-pregunta', params: {cuestionario_id: cuestionario.id}}">
+              <i class="fa fa-plus-circle"></i>
+              Agregar pregunta
+            </router-link>
+          </div>
+        </div>
+
+
+        <table class="table table-hover">
+          <thead class="thead-dark">
+            <tr>
+              <th>Nombre</th>
+              <th>Tipo</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="pregunta in filtradoPreguntas">
+              <td>
+                {{ pregunta.enunciado }}
+              </td>
+              <td>
+                {{ pregunta.tipo }}
+              </td>
+              <td>
+                <router-link class="btn btn-default btn-xs" :to="{name: 'pregunta-editar', params: {pregunta_id: pregunta.id, cuestionario_id: cuestionario.id}}"><i class="fa fa-edit"></i></router-link>
+                <router-link class="btn btn-default btn-xs" :to="{name: 'pregunta-borrar', params: {pregunta_id: pregunta.id, cuestionario_id: cuestionario.id}}"><i class="fa fa-trash-alt"></i></router-link>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="alert alert-warning" role="alert" v-if="cuestionario.preguntas > filtradoPreguntas.length">
+          <i class="fa fa-exclamation-triangle"></i> Cuestionario inconcluso, aún falta agregar {{cuestionario.preguntas - filtradoPreguntas.length }} pregunta<span v-if="(cuestionario.preguntas - filtradoPreguntas.length) > 1">s</span>
+        </div>
+      </div>
+    </section>
+  </template>
+
+
+  <template id="nueva-pregunta">
+    <section class="jumbotron jumbotron-fluid">
+      <div class="container">
+        <h2>Crear pregunta</h2>
+        <h4><em>Cuestionario: </em> {{cuestionario.nombre}}</h4>
+        <hr>
+        <form v-on:submit="createPregunta">
+          <div class="form-group row">
+            <label for="agregar-enunciado" class="col-sm-3 col-form-label">Enunciado</label>
+            <div class="col-sm-9">
+              <input class="form-control" id="agregar-enunciado" v-model="pregunta.enunciado" required/>
+            </div>
+          </div>
+          <div class="form-group row">
+            <label for="agregar-tipo" class="col-sm-3 col-form-label">Tipo Elemento</label>
+            <div class="col-sm-9">
+              <select class="form-control" id="agregar-tipo" v-model="pregunta.tipo" @change="onChange">
+                <option value="text">Text</option>
+                <option value="email">Email</option>
+                <option value="url">Url</option>
+                <option value="radio">Radio Button</option>
+                <option value="checkbox">CheckBox</option>
+                <option value="textarea">TextArea</option>
+                <option value="select">Select</option>
+                <option value="number">Number</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group row" v-if="isInArray(pregunta.tipo)">
+            <div v-for="(opcion, index) in pregunta.opciones" class="col-12">
+              <label class="col-12 col-form-label" :for="index+1">Opción {{ index+1 }}</label>
+              <div class="input-group col-12">
+                <div class="input-group-prepend">
+                  <span class="input-group-text">Texto</span>
+                </div>
+                <input type="text" class="form-control" :id="index+1" v-model="opcion.valor">
+                <div class="input-group-append">
+                  <button class="btn btn-outline-secondary" type="button" @click="borrarOpcion(index)"><i class="fa fa-trash"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <hr>
+          <div class="d-flex justify-content-between">
+              <div class="d-flex justify-content-start">
+                <button type="submit" class="btn btn-primary"><i class="fa fa-angle-left"></i> Guardar</button>
+              </div>
+
+              <div class="d-flex justify-content-center" v-if="isInArray(pregunta.tipo)">
+                <a class="btn btn-success opcion" href="#" @click="nuevaOpcion" role="button"><i class="fa fa-plus"></i> Opción</a>
+              </div>
+
+              <div class="d-flex justify-content-end">
+                <router-link class="btn btn-default float-right" :to="{name: 'cuestionario-preguntas', params: {cuestionario_id: cuestionario.id}}"><i class="fa fa-angle-left"></i> Cancelar</router-link>
+              </div>
+          </div>
+        </form>
+      </div>
+    </section>
+  </template>
+
+  <template id="pregunta-editar">
+    <section class="jumbotron jumbotron-fluid">
+      <div class="container">
+        <h2>Crear pregunta</h2>
+        <h4><em>Cuestionario: </em> {{cuestionario.nombre}}</h4>
+        <hr>
+        <form v-on:submit="actualizarPregunta">
+          <div class="form-group row">
+            <label for="editar-enunciado" class="col-sm-3 col-form-label">Enunciado</label>
+            <div class="col-sm-9">
+              <input class="form-control" id="editar-enunciado" v-model="pregunta.enunciado" required/>
+            </div>
+          </div>
+          <div class="form-group row">
+            <label for="editar-tipo" class="col-sm-3 col-form-label">Tipo Elemento</label>
+            <div class="col-sm-9">
+              <select class="form-control" id="editar-tipo" v-model="pregunta.tipo" @change="onChange">
+                <option value="text" >Text</option>
+                <option value="email">Email</option>
+                <option value="url">Url</option>
+                <option value="radio">Radio Button</option>
+                <option value="checkbox">CheckBox</option>
+                <option value="textarea">TextArea</option>
+                <option value="select">Select</option>
+                <option value="number">Number</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group row" v-if="isInArray(pregunta.tipo)">
+            <div v-for="(opcion, index) in pregunta.opciones" class="col-12">
+              <label class="col-12 col-form-label" :for="index+1">Opción {{ index+1 }}</label>
+              <div class="input-group col-12">
+                <div class="input-group-prepend">
+                  <span class="input-group-text">Texto</span>
+                </div>
+                <input type="text" class="form-control" :id="index+1" v-model="opcion.valor">
+                <div class="input-group-append">
+                  <button class="btn btn-outline-secondary" type="button" @click="borrarOpcion(index)"><i class="fa fa-trash"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <hr>
+          <div class="d-flex justify-content-between">
+              <div class="d-flex justify-content-start">
+                <button type="submit" class="btn btn-primary"><i class="fa fa-angle-left"></i> Guardar</button>
+              </div>
+
+              <div class="d-flex justify-content-center" v-if="isInArray(pregunta.tipo)">
+                <a class="btn btn-success opcion" href="#" @click="nuevaOpcion" role="button"><i class="fa fa-plus"></i> Opción</a>
+              </div>
+
+              <div class="d-flex justify-content-end">
+                <router-link class="btn btn-default float-right" :to="{name: 'cuestionario-preguntas', params: {cuestionario_id: cuestionario.id}}"><i class="fa fa-angle-left"></i> Cancelar</router-link>
+              </div>
+          </div>
+
+        </form>
+      </div>
+    </section>
+  </template>
+
+
+    <template id="pregunta-borrar">
+        <section class="jumbotron jumbotron-fluid">
+          <div class="container">
+            <h2>Borrar pregunta {{ pregunta.enunciado }}</h2>
+            <form v-on:submit="borrarPregunta">
+              <p>Esta acción no se puede deshacer.</p>
+              <hr>
+              <div class=" row">
+                <div class="col-sm-12">
+                  <button type="submit" class="btn btn-danger"><i class="fa fa-angle-left"></i> Borrar</button>
+                  <router-link :to="{name: 'cuestionario-preguntas', params: {cuestionario_id: cuestionario.id}}" class="btn btn-default float-right"><i class="fa fa-angle-left"></i> Cancelar</router-link>
+                </div>
+              </div>
+            </form>
+          </div>
+        </section>
+    </template>
+
+  <script src="assets/vendor/vuejs/vue.js"></script>
+  <script src="assets/vendor/vuejs/vue-router.js"></script>
+  <script src="assets/js/main.js"></script>
+
+
+</body>
+</html>
